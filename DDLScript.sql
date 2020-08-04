@@ -1,0 +1,184 @@
+-- Drop all tables
+DROP TABLE IF EXISTS PROJECT_Log_to_Gas;
+DROP TABLE IF EXISTS PROJECT_Gas;
+DROP TABLE IF EXISTS PROJECT_Log_to_Diver;
+DROP TABLE IF EXISTS PROJECT_DiveLog;
+DROP TABLE IF EXISTS PROJECT_Site_to_Cert;
+DROP TABLE IF EXISTS PROJECT_DiveSites;
+DROP TABLE IF EXISTS PROJECT_Permits;
+DROP TABLE IF EXISTS PROJECT_Diver_to_Cert;
+DROP TABLE IF EXISTS PROJECT_Diver;
+DROP TABLE IF EXISTS PROJECT_CertsAndSpecialties;
+DROP TABLE IF EXISTS PROJECT_Contact;
+
+
+-- create Contact table
+CREATE TABLE PROJECT_Contact(
+contactID INT PRIMARY KEY AUTO_INCREMENT,
+lastName VARCHAR(30) NOT NULL,
+firstName VARCHAR(30) NOT NULL,
+phone VARCHAR(15) NOT NULL,
+email VARCHAR(50) NOT NULL,
+address BLOB,
+birthday DATE
+);
+
+-- create Certs and specialties table
+CREATE TABLE PROJECT_CertsAndSpecialties(
+title VARCHAR(50) PRIMARY KEY
+);
+
+-- create Diver table
+CREATE TABLE PROJECT_Diver(
+diverID INT PRIMARY KEY AUTO_INCREMENT,
+contactID INT NOT NULL,
+emergencyContactID INT NOT NULL,
+classification ENUM('Support', 'Level_1', 'Level_2', 'Level_3') NOT NULL,
+DANno INT NOT NULL,
+DANexpiration DATE NOT NULL,
+active ENUM ('y','n') NOT NULL,
+medicalAlerts BLOB,
+
+CONSTRAINT contactDiverFK FOREIGN KEY (contactID)
+REFERENCES PROJECT_Contact(contactID)
+ON DELETE CASCADE
+ON UPDATE CASCADE,
+
+CONSTRAINT emercontactFK FOREIGN KEY (emergencyContactID)
+REFERENCES PROJECT_Contact(contactID)
+ON DELETE CASCADE
+ON UPDATE CASCADE
+);
+
+-- create intersection table for Divers and Certs
+CREATE TABLE PROJECT_Diver_to_Cert(
+diverID INT NOT NULL,
+title VARCHAR(50) NOT NULL,
+instructor VARCHAR(50),
+certDate DATE,
+agency VARCHAR(50),
+certNo VARCHAR(15),
+
+PRIMARY KEY(diverID, title),
+
+CONSTRAINT diverCertFK FOREIGN KEY(diverID)
+REFERENCES PROJECT_Diver(diverID)
+ON DELETE CASCADE
+ON UPDATE CASCADE,
+
+FOREIGN KEY(title)
+REFERENCES PROJECT_CertsAndSpecialties(title)
+);
+
+-- create Permit table
+CREATE TABLE PROJECT_Permits(
+permitID INT PRIMARY KEY AUTO_INCREMENT,
+permitNo VARCHAR(20) NOT NULL,
+issuingEntity VARCHAR(50) NOT NULL,
+contactID INT NOT NULL,
+dateIssued DATE NOT NULL,
+dateExpires DATE NOT NULL,
+siteConstraints BLOB,
+objectives BLOB NOT NULL,
+deliverables BLOB,
+
+CONSTRAINT contactPermitFK FOREIGN KEY(contactID)
+REFERENCES PROJECT_Contact(contactID)
+ON DELETE CASCADE
+ON UPDATE CASCADE
+);
+
+-- create Dive Sites table
+CREATE TABLE PROJECT_DiveSites(
+siteID INT PRIMARY KEY AUTO_INCREMENT,
+siteName VARCHAR(50) NOT NULL,
+gps VARCHAR(30) NOT NULL,
+county VARCHAR(30) NOT NULL,
+owner VARCHAR(30) NOT NULL,
+hours VARCHAR(30) NOT NULL,
+maxDepth INT NOT NULL,
+permitID INT,
+
+FOREIGN KEY(permitID)
+REFERENCES PROJECT_Permits(permitID)
+);
+
+-- create intersection table for Sites and Certs
+CREATE TABLE PROJECT_Site_to_Cert(
+siteID INT NOT NULL,
+title VARCHAR(50) NOT NULL,
+
+PRIMARY KEY(siteID, title),
+
+CONSTRAINT siteCertFK FOREIGN KEY(siteID)
+REFERENCES PROJECT_DiveSites(siteID)
+ON DELETE CASCADE
+ON UPDATE CASCADE,
+
+FOREIGN KEY(title)
+REFERENCES PROJECT_CertsAndSpecialties(title)
+);
+
+-- create DiveLog table
+CREATE TABLE PROJECT_DiveLog(
+diveID INT PRIMARY KEY AUTO_INCREMENT,
+siteID INT NOT NULL,
+diveDate DATE NOT NULL,
+runTime INT NOT NULL,
+maxDepth INT NOT NULL,
+teamExpenses FLOAT,
+description BLOB,
+
+CONSTRAINT siteLogFK FOREIGN KEY(siteID)
+REFERENCES PROJECT_DiveSites(siteID)
+ON DELETE CASCADE
+ON UPDATE CASCADE
+);
+
+-- create intersection table for Log and Diver
+CREATE TABLE PROJECT_Log_to_Diver(
+diveID INT NOT NULL,
+diverID INT NOT NULL,
+
+PRIMARY KEY(diveID, diverID),
+
+CONSTRAINT logDiveFK FOREIGN KEY(diveID)
+REFERENCES PROJECT_DiveLog(diveID)
+ON DELETE CASCADE
+ON UPDATE CASCADE,
+
+CONSTRAINT logDiverFK FOREIGN KEY(diverID)
+REFERENCES PROJECT_Diver(diverID)
+ON DELETE CASCADE
+ON UPDATE CASCADE
+);
+
+-- create Gas Table
+CREATE TABLE PROJECT_Gas(
+o2 INT NOT NULL,
+he INT NOT NULL,
+maxDepth INT NOT NULL,
+ceiling INT,
+
+PRIMARY KEY(o2, he)
+);
+
+-- create intersection table for Log and Gas
+CREATE TABLE PROJECT_Log_to_Gas(
+diveID INT NOT NULL,
+o2 INT NOT NULL,
+he INT NOT NULL,
+
+PRIMARY KEY(diveID, o2, he),
+
+CONSTRAINT logGasFK FOREIGN KEY(diveID)
+REFERENCES PROJECT_DiveLog(diveID)
+ON DELETE CASCADE
+ON UPDATE CASCADE,
+
+FOREIGN KEY(o2, he)
+REFERENCES PROJECT_Gas(o2, he)
+);
+
+
+
